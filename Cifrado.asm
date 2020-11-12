@@ -8,19 +8,6 @@ Mapeo MACRO
 
 ENDM
 
-DCRCIFRADO  MACRO
-
-JMP programa
-
-ENDM
-
-DCMCIFRADO  MACRO
-
-JMP programa
-
-ENDM
-
-
 .386
 .model flat, stdcall
 
@@ -48,11 +35,14 @@ filaM  db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
 columnasM db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
 contadorLlave DD 0
 contadorMensaje DD 0
+contadorD DD 0
 contador DB 0
 mensajeCifrado DB 0,0
+mensajeDescifrado DB 0,0
 mensajeV DB 100 dup (0)
 claveV DB 100 dup (0)
 TxtMensajeCifrado DB "Mensaje Cifrado: ",0
+TxtMensajeDecifrado DB "Mensaje Cifrado: ",0
 
 .DATA? 
 
@@ -63,7 +53,7 @@ Matriz DB 676 DUP(?)
 subcadena DB ?
 columnas DW ?
 filas DW ?
-letra DB ?
+datos DD ?
 
 
 .CONST
@@ -226,10 +216,10 @@ ClaveRepetida:
 
         ;Llama a macro de mapeo para saber el valor en el cual se va a cifrar
 	    Mapeo
-	    LEA ESI, Matriz
+		LEA ESI, Matriz
 	    ADD ESI, EAX
 	    MOV AL, [ESI]
-	    MOV mensajeCifrado, AL			;se hace la suma a la matriz para poder saber el valor en el cual se va a cifrar
+	    MOV mensajeCifrado, AL ;se hace la suma a la matriz para poder saber el valor en el cual se va a cifrar
 	    INVOKE StdOut, ADDR mensajeCifrado
 	    LEA ESI, mensajeV				; Se vuelve a ingresar el mensaje
 	    ADD ESI, contadorMensaje		;se le suma el contador a ESI para que pase al siguiente caracter
@@ -341,17 +331,18 @@ ClaveRepetida:
 		JMP programa
 
 DClaveRepetida:
-      INVOKE StdOut, ADDR mensajeD
-      INVOKE StdIn, ADDR mensajeV,97
-      INVOKE StdOut, ADDR clave
-      INVOKE StdIn, ADDR claveV,97
 
-      MOV contadorMensaje,0
-      MOV contadorLlave,0
+		    INVOKE StdOut, ADDR mensajeD 
+			INVOKE StdIn, ADDR mensajeV, 100
+			INVOKE StdOut, ADDR clave
+			INVOKE StdIn, ADDR claveV, 100
+			INVOKE StdOut, ADDR TxtMensajeDecifrado
+			MOV contadorMensaje, 0
+			MOV contadorLlave, 0
+			MOV contadorD, 0
 
-	  FilaD:
+		DecipherLoop:
         ;calcular la posicion del caracter de palabra clave en la matriz
-
 			BuscarFilaD:
 			XOR AX, AX
 			LEA EDI, claveV					;contenido de clave
@@ -369,7 +360,7 @@ DClaveRepetida:
 
 			LlaveCopiaD:
 			MOV contadorLlave, 0			;se reincia la clave, para volver a correr la clave
-			JMP BuscarFilaD				; se repite el proceso con diferentes caracteres
+			JMP BuscarFilaD					; se repite el proceso con diferentes caracteres
 
 			FilasIgnorarD:
 			MOV filas, 1Eh ;30d				; se agrega el dato de filas ya que este tambien se cuenta como un simbolo
@@ -378,19 +369,138 @@ DClaveRepetida:
 			INC contadorLlave				; se incrementa el contador para ver el siguiente caracter de la clave
 
 			CMP filas, 1Eh ;Evalúa caracter a ignorar.
-			JE FilaD
-			
+			JE DecipherLoop
+			MOV columnas, 0
+
+	     BusquedaMapeo:
+			Mapeo						;Se llama al mapeo para saber el valor de la fila en la columna 0
+			LEA ESI, Matriz
+			ADD ESI, EAX				
+			LEA EDI, mensajeV 
+			ADD EDI, contadorD
+			MOV BL, [EDI]
+			CMP BL, 20h
+			JE EvaluaEspacio
+			CMP BL, 41h ;"A"
+			JS IngColumnasD
+			CMP BL, 5Bh ;"["
+			JNS IngColumnasD
+			MOV AL, [ESI]
+			CMP AL, [EDI]
+			JE NoColumnas
+			INC columnas
+			JMP BusquedaMapeo
+
+			EvaluaEspacio:
+			print chr$(" ")
+
+			IngColumnasD:
+			INC contadorD
+			JMP BusquedaMapeo
+
+			NoColumnas:
+			INC contadorD
+			MOV filas, 0
+			Mapeo
+			LEA ESI, Matriz
+			ADD ESI, EAX						;se usa el mapeo para saber la letra en el cual se cifro
+			MOV AL, [ESI]
+			MOV mensajeDescifrado, AL
+			INVOKE StdOut, ADDR mensajeDescifrado
 			LEA ESI, mensajeV
-		    ADD ESI, contadorMensaje 	;se le suma el contador a ESI para que pase al siguiente caracter
-		    MOV AL, [ESI]
-		    CMP AL, 0 ; si ya termino la cadena, imprime el mensaje cifrado
-			JNE CifradoCM
+			ADD ESI, contadorD
+			MOV AL, [ESI]
+			CMP AL, 0
+			JNE DecipherLoop
+			print chr$(13,10)
 
+			JMP programa
 
-JMP programa
 DClaveMensaje:
-DCMCIFRADO
-JMP programa
+
+   INVOKE StdOut, ADDR mensajeD 
+			INVOKE StdIn, ADDR mensajeV, 100
+			INVOKE StdOut, ADDR clave
+			INVOKE StdIn, ADDR claveV, 100
+			INVOKE StdOut, ADDR TxtMensajeDecifrado
+			MOV contadorMensaje, 0
+			MOV contadorLlave, 0
+			MOV contadorD, 0
+
+		DecipherLoop:
+        ;calcular la posicion del caracter de palabra clave en la matriz
+			BuscarFilaD:
+			XOR AX, AX
+			LEA EDI, claveV					;contenido de clave
+			ADD EDI, contadorLlave			;contenido de contador
+			MOV AL, [EDI]
+			CMP AL, 0						;si ya se recorrio todo
+			JE LlaveCopiaD					;se repite la clave
+			CMP AL, 41h						;Si AL es menor a 41h quiere decir que no esta en el alfabeto
+			JS FilasIgnorarD					
+			CMP AL, 5Bh						;se compara con 5Bh ya que nos dice si ya termino de recorrer el alfabeto
+			JNS FilasIgnorarD				
+			MOV filas, AX					;se guardar el dato en filas
+			SUB filas, 41h					;se resta con 41h ya que se necesita saber un valor no letra
+			JMP FinProcFilasD
+
+			LlaveCopiaD:
+			MOV contadorLlave, 0			;se reincia la clave, para volver a correr la clave
+			JMP BuscarFilaD					; se repite el proceso con diferentes caracteres
+
+			FilasIgnorarD:
+			MOV filas, 1Eh ;30d				; se agrega el dato de filas ya que este tambien se cuenta como un simbolo
+
+			FinProcFilasD:
+			INC contadorLlave				; se incrementa el contador para ver el siguiente caracter de la clave
+
+			CMP filas, 1Eh ;Evalúa caracter a ignorar.
+			JE DecipherLoop
+			MOV columnas, 0
+
+	     BusquedaMapeo:
+			Mapeo						;Se llama al mapeo para saber el valor de la fila en la columna 0
+			LEA ESI, Matriz
+			ADD ESI, EAX				
+			LEA EDI, mensajeV 
+			ADD EDI, contadorD
+			MOV BL, [EDI]
+			CMP BL, 20h
+			JE EvaluaEspacio
+			CMP BL, 41h ;"A"
+			JS IngColumnasD
+			CMP BL, 5Bh ;"["
+			JNS IngColumnasD
+			MOV AL, [ESI]
+			CMP AL, [EDI]
+			JE NoColumnas
+			INC columnas
+			JMP BusquedaMapeo
+
+			EvaluaEspacio:
+			print chr$(" ")
+
+			IngColumnasD:
+			INC contadorD
+			JMP BusquedaMapeo
+
+			NoColumnas:
+			INC contadorD
+			MOV filas, 0
+			Mapeo
+			LEA ESI, Matriz
+			ADD ESI, EAX						;se usa el mapeo para saber la letra en el cual se cifro
+			MOV AL, [ESI]
+			MOV mensajeDescifrado, AL
+			INVOKE StdOut, ADDR mensajeDescifrado
+			LEA ESI, mensajeV
+			ADD ESI, contadorD
+			MOV AL, [ESI]
+			CMP AL, 0
+			JNE DecipherLoop
+			print chr$(13,10)
+
+			JMP programa
 
 Limpiar proc
 
@@ -404,15 +514,15 @@ Limpiar proc
 
     invoke GetConsoleScreenBufferInfo,hOutPut,ADDR sbi
 
-    mov eax, sbi.dwSize
+    mov EAX, sbi.dwSize
 
-    push ax
-    rol eax, 16
-    mov cx, ax
-    pop ax
-    mul cx
+    push AX
+    rol EAX, 16
+    mov CX, AX
+    pop AX
+    mul CX
     cwde
-    mov cnt, eax
+    mov cnt, EAX
 
     invoke FillConsoleOutputCharacter,hOutPut,32,cnt,NULL,ADDR noc
 
