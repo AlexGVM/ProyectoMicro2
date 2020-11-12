@@ -1,88 +1,21 @@
-Mapeo MACRO I,J
+Mapeo MACRO
     ;Filas * 26 + Columnas 
-    MOV AX, I
-    MOV BL , 1AH
-    MUL BL                  ; formula de mapeo
-    ADD AX, J
-    
-    LEA ESI, Matriz
-    ADD ESI, EAX
-    MOV AL, [ESI]
-    MOV letra,AL
-    INVOKE StdOut, ADDR letra
+        XOR EAX, EAX		;se limpia los registros
+		MOV AX, filas		;se mueve a un registro lo que se tiene en filas
+		MOV BL, 1Ah			; se mueve a BL el valor de 26 que en hex es 1AH
+		MUL BL				; se multiplica y resultado se guarda en AL				
+		ADD AX, columnas    ; y se suma con la cantidad que se obtiene en columnas
 
 ENDM
-
-
-CRCIFRADO MACRO matrizaux,msgaux
-
-        MOV CX,0                       ; CONTADOR
-        LEA ESI, matrizaux			;indices CADENA TOTAL
-        LEA EDI, msgaux			;indices CADENA TOTAL
-        LeerCadena:
-     
-        MOV AL, [ESI]					;contenido [] lo muevo a AL
-        CMP AL, 0						;solo compara con registro
-        JE FinProc						;si se termina la cadena termina proc
-        CMP AL, [EDI]					;se compara con subcadena, registro == indice
-        JE CaracteresIguales			;son iguales
-        JNE Pruebas                     ;no son iguales
-       
-        Pruebas:
-        INC ESI							;se incrementa cadena total
-        INC CX                         ; SE INCREMENTA CONTADOR
-        JMP LeerCadena
-
-        CaracteresIguales:
-        MOV columnas, CX
-     
-        FinProc:
-         print chr$(13,10)
-         
-  ;---------------------------------------------------------------------------
-        LEA ESI, filaM			;indices CADENA TOTAL
-        LEA EDI, claveV			;indices SUBCADENA
-        MOV CX,0                        ; CONTADOR
-
-        LeerCadena1:
-        MOV AL, [ESI]					;contenido [] lo muevo a AL
-        CMP AL, 0						;solo compara con registro
-        JE FinProc1						;si se termina la cadena termina proc
-        CMP AL, [EDI]					;se compara con subcadena, registro == indice
-        JE CaracteresIguales1		;son iguales
-        JNE Pruebas1                     ;no son iguales
-       
-        Pruebas1:
-        INC ESI							;se incrementa cadena total
-        INC CX                        ; SE INCREMENTA CONTADOR
-        JMP LeerCadena1
-
-        CaracteresIguales1:
-        MOV filas, CX
-
-        FinProc1:
-        Mapeo filas,columnas
- 
-ENDM
-
-CMCIFRADO MACRO
-
-INVOKE StdOut, ADDR holamundo  ;Imprime el menu
-JMP programa
-
-ENDM
-
 
 DCRCIFRADO  MACRO
 
-INVOKE StdOut, ADDR holamundo  ;Imprime el menu
 JMP programa
 
 ENDM
 
 DCMCIFRADO  MACRO
 
-INVOKE StdOut, ADDR holamundo  ;Imprime el menu
 JMP programa
 
 ENDM
@@ -107,27 +40,31 @@ menu DB "Seleccione opcion, 1 = Cifrar , 2 = Descifrar , 3 = Salir: ",0
 menuCifrado DB "Seleccione opcion, 1 = Cifrado Clave Repetida, 2 = Cifrado Clave-Mensaje: ",0
 menuDescifrado DB "Seleccione opcion, 1 = Descifrado Clave Repetida, 2 = Descifrado Clave-Mensaje: ",0
 textoingreso DB "Ingrese una opcion: ",0
-holamundo DB "Hola Mundo",0
-mensaje	DB "Ingrese mensaje a cifrado: ",0
+mensaje	DB "Ingrese mensaje para cifrado: ",0
+mensajeD DB "Ingrese mensaje para descifrado: ",0
 clave DB "Ingrese clave para cifrar mensaje: ",0
 linefeed db 13, 10, 0
 filaM  db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
 columnasM db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
-columnas DW 0,0
-filas DW 0,0
+contadorLlave DD 0
+contadorMensaje DD 0
 contador DB 0
+mensajeCifrado DB 0,0
+mensajeV DB 100 dup (0)
+claveV DB 100 dup (0)
+TxtMensajeCifrado DB "Mensaje Cifrado: ",0
 
 .DATA? 
 
-mensajeV DB 100 dup (?)
-claveV DB 100 dup (?)
-cifrado DB 50 dup (?)
 opcion DB 50 dup (?)
 opcion2 DB 50 dup (?)
 opcion3 DB 50 dup (?)
 Matriz DB 676 DUP(?)
 subcadena DB ?
+columnas DW ?
+filas DW ?
 letra DB ?
+
 
 .CONST
 
@@ -136,35 +73,35 @@ letra DB ?
 main:
 
     LEA ESI, Matriz
-    MOV CX, 2A4h 
-    MOV AL, 41h 
+    MOV CX, 2A4h	;676 es 26*26
+    MOV AL, 41h	  ;se guarda en AL el valor de A
     MOV BL, 0      ;filas
     MOV BH, 0      ;caracteres alfabeto contador  
    
     MatrizLlena:
-    MOV [ESI], AL
-    INC ESI
-    INC BH
-    INC AL
-    CMP BH, 1Ah
-    JE NuevaFila
-    CMP AL, 5Bh 
-    JE ErrorCaracter
-    JMP CLoop
+    MOV [ESI], AL	;contenido de AL a matriz
+    INC ESI			;se incrementa ya que se agrego en la matri
+    INC BH			;incrementa contador de alfabetos
+    INC AL			;ingrementa valor que entrara a matriz
+    CMP BH, 1Ah		; se compara si ya se lleno una fila
+    JE NuevaFila	;salta si esta es igual a 26
+    CMP AL, 5Bh		;salta si es un caracter no deseado 
+    JE ErrorCaracter	; salta si este encuentra un caracter no deseado
+    JMP CLoop			; salta a CLoop para modificar contadores
 
     ErrorCaracter:
-    MOV AL, 41h
+    MOV AL, 41h			; se reinicia el alfabeto si se encuentra un caracter no deseado
     JMP CLoop
 
     NuevaFila:
-    MOV BH, 0
-    MOV AL, 41h 
-    INC BL 
-    ADD AL, BL
+    MOV BH, 0			; se reinicia el carecter
+    MOV AL, 41h			; se reinicia el alfabeto
+    INC BL				; se incrementa fila ya que se lleno otra 
+    ADD AL, BL			; se suma el valor de alfabeto mas uno de las filas para que se mueva a la izq
 
     CLoop:
-    DEC CX
-    CMP CX, 0
+    DEC CX				; se decrementa contador de posiciones vacias en matriz
+    CMP CX, 0			; si el contador es igual a 0, significa que ya termino de llenar la matriz
     JNE MatrizLlena
 
 programa:
@@ -203,19 +140,253 @@ INVOKE StdOut, ADDR linefeed  ;salto de linea
 INVOKE StdOut, ADDR textoingreso  ;texto de ingreso
 INVOKE StdIn, ADDR opcion3,25  ;nombre a leer
 
-ClaveRepetida:
- INVOKE StdOut, ADDR mensaje
- INVOKE StdIn, ADDR mensajeV,97
+CMP opcion3,31h
+JE DClaveRepetida
 
- INVOKE StdOut, ADDR clave
- INVOKE StdIn, ADDR claveV,97
-CRCIFRADO filaM,mensajeV
-JMP programa
-ClaveMensaje:
-CMCIFRADO
-JMP programa
+CMP opcion3,32h
+JE DClaveMensaje
+
+ClaveRepetida:
+
+	  INVOKE StdOut, ADDR mensaje
+      INVOKE StdIn, ADDR mensajeV,97
+      INVOKE StdOut, ADDR clave
+      INVOKE StdIn, ADDR claveV,97
+	  INVOKE StdOut, ADDR TxtMensajeCifrado
+
+      MOV contadorMensaje,0
+      MOV contadorLlave,0
+
+     CadenaCifrada:
+        ; se calcula el valor de columnas que esta el mensaje que se quiere cifrar
+        XOR AX, AX
+		LEA ESI, mensajeV
+		ADD ESI, contadorMensaje
+		MOV AL, [ESI]
+		CMP AL, 20h ;Evalúa espacio en blanco.
+		JE EspacioBlanco
+		CMP AL, 41h		; si es negativo quiere decir que es un caracter no valido
+		JS ColumnasIg
+		CMP AL, 5Bh   ;se compara si ya se recorrio todo el abecedario
+		JNS ColumnasIg
+		MOV columnas, AX	; se guarda el valor en columnas
+		SUB columnas, 41h	; se le resta 41h ya que se quiere saber el valor no la letra
+		JMP FinProcJ
+
+		EspacioBlanco:
+		MOV columnas, 1Fh		;31d espacio en blanco
+		JMP FinProcJ
+
+		ColumnasIg:
+		MOV columnas, 1Eh ;30d
+
+		FinProcJ:
+		INC contadorMensaje			;incrementa el mensaje para saber el siguiente caracter que se tiene que cifrar
+
+
+	    CMP columnas, 1Fh ;Evalúa espacio en blanco.
+	    JNE IndiceInc 
+	    print chr$(" ")
+	    MOV columnas, 1Eh		;Separador
+
+	    IndiceInc:
+	    CMP columnas, 1Eh ;Evalúa caracter a ignorar.
+	    JE CadenaCifrada
+
+	Fila:
+        ;calcular la posicion del caracter de palabra clave en la matriz
+
+			BuscarFila:
+			XOR AX, AX
+			LEA EDI, claveV					;contenido de clave
+			ADD EDI, contadorLlave			;contenido de contador
+			MOV AL, [EDI]
+			CMP AL, 0						;si ya se recorrio todo
+			JE LlaveCopia					;se repite la clave
+			CMP AL, 41h						;Si AL es menor a 41h quiere decir que no esta en el alfabeto
+			JS FilasIgnorar					
+			CMP AL, 5Bh						;se compara con 5Bh ya que nos dice si ya termino de recorrer el alfabeto
+			JNS FilasIgnorar				
+			MOV filas, AX					;se guardar el dato en filas
+			SUB filas, 41h					;se resta con 41h ya que se necesita saber un valor no letra
+			JMP FinProcFilas
+
+			LlaveCopia:
+			MOV contadorLlave, 0			;se reincia la clave, para volver a correr la clave
+			JMP BuscarFila					; se repite el proceso con diferentes caracteres
+
+			FilasIgnorar:
+			MOV filas, 1Eh ;30d				; se agrega el dato de filas ya que este tambien se cuenta como un simbolo
+
+			FinProcFilas:
+			INC contadorLlave				; se incrementa el contador para ver el siguiente caracter de la clave
+
+			CMP filas, 1Eh ;Evalúa caracter a ignorar.
+			JE Fila
+
+        ;Llama a macro de mapeo para saber el valor en el cual se va a cifrar
+	    Mapeo
+	    LEA ESI, Matriz
+	    ADD ESI, EAX
+	    MOV AL, [ESI]
+	    MOV mensajeCifrado, AL			;se hace la suma a la matriz para poder saber el valor en el cual se va a cifrar
+	    INVOKE StdOut, ADDR mensajeCifrado
+	    LEA ESI, mensajeV				; Se vuelve a ingresar el mensaje
+	    ADD ESI, contadorMensaje		;se le suma el contador a ESI para que pase al siguiente caracter
+	    MOV AL, [ESI]
+	    CMP AL, 0						; si ya termino la cadena, imprime el mensaje cifrado
+	    JNE CadenaCifrada
+		print chr$(13,10)
+		JMP programa
+
+ ClaveMensaje:
+		
+	  INVOKE StdOut, ADDR mensaje
+      INVOKE StdIn, ADDR mensajeV,97
+      INVOKE StdOut, ADDR clave
+      INVOKE StdIn, ADDR claveV,97
+	  INVOKE StdOut, ADDR TxtMensajeCifrado
+
+      MOV contadorMensaje,0
+      MOV contadorLlave,0
+	  MOV contador,0				; me ayudará para saber si la clave ya termino de recorrer todo
+
+	CifradoCM:
+   ; se calcula el valor de columnas que esta el mensaje que se quiere cifrar
+        XOR AX, AX
+		LEA ESI, mensajeV
+		ADD ESI, contadorMensaje
+		MOV AL, [ESI]
+		CMP AL, 20h			 ;Evalúa espacio en blanco.
+		JE EspacioBlanco1
+		CMP AL, 41h				;si es menor quiere decir que no es un alfabeto
+		JS ColumnasIg1
+		CMP AL, 5Bh				; si compara para ver si ya se termino de leer todo el alfabeto
+		JNS ColumnasIg1
+		MOV columnas, AX		;Se guarda el dato en columnas
+		SUB columnas, 41h		;se necesita saber el valor no la letra
+		JMP FinProcJ1
+
+		EspacioBlanco1:
+		MOV columnas, 1Fh ;31d tambien cuenta el valor de los espacios
+		JMP FinProcJ1
+
+		ColumnasIg1:
+		MOV columnas, 1Eh ;30d tambien cuenta el valor de los espacios
+
+		FinProcJ1:
+		INC contadorMensaje ;incrementar contador para leer el siguiente caracter
+	
+
+	    CMP columnas, 1Fh ;Evalúa espacio en blanco.
+	    JNE IndiceInc1
+	    print chr$(" ")
+	    MOV columnas, 1Eh
+
+	    IndiceInc1:
+	    CMP columnas, 1Eh ;Evalúa caracter a ignorar.
+	    JE CadenaCifrada
+
+	;------------------------------------------------------------------
+
+	FilaCM:
+        ;calcular la posicion del caracter de palabra clave en la matriz junto al mensaje
+
+		BuscarCM:
+		XOR AX, AX
+		CMP contador, 1 
+		JNE ClaveInicial
+		LEA EDI, mensajeV
+		JMP ClaveMensaje1
+
+		ClaveInicial:
+		LEA EDI, claveV
+
+		ClaveMensaje1:
+		ADD EDI, contadorLlave
+		MOV AL, [EDI]
+		CMP AL, 0
+		JE ReiniciarClave 
+		CMP AL, 41h 
+		JS IgnorarCaracteres
+		CMP AL, 5Bh 
+		JNS IgnorarCaracteres
+		MOV filas, AX
+		SUB filas, 41h
+		JMP FinCM
+
+		ReiniciarClave:
+		MOV contadorLlave, 0
+		MOV contador, 1
+		JMP BuscarCM
+
+		IgnorarCaracteres:
+		MOV filas, 1Eh ;30d
+
+		FinCM:
+		INC contadorLlave
+        ;Llama a macro de mapeo para saber el valor en el cual se va a cifrar
+	    Mapeo
+	    LEA ESI, Matriz
+	    ADD ESI, EAX
+	    MOV AL, [ESI]
+	    MOV mensajeCifrado, AL ;se hace la suma a la matriz para poder saber el valor en el cual se va a cifrar
+	    INVOKE StdOut, ADDR mensajeCifrado
+	    LEA ESI, mensajeV
+	    ADD ESI, contadorMensaje 	;se le suma el contador a ESI para que pase al siguiente caracter
+	    MOV AL, [ESI]
+	    CMP AL, 0 ; si ya termino la cadena, imprime el mensaje cifrado
+	    JNE CifradoCM
+		print chr$(13,10)
+		JMP programa
+
 DClaveRepetida:
-DCRCIFRADO
+      INVOKE StdOut, ADDR mensajeD
+      INVOKE StdIn, ADDR mensajeV,97
+      INVOKE StdOut, ADDR clave
+      INVOKE StdIn, ADDR claveV,97
+
+      MOV contadorMensaje,0
+      MOV contadorLlave,0
+
+	  FilaD:
+        ;calcular la posicion del caracter de palabra clave en la matriz
+
+			BuscarFilaD:
+			XOR AX, AX
+			LEA EDI, claveV					;contenido de clave
+			ADD EDI, contadorLlave			;contenido de contador
+			MOV AL, [EDI]
+			CMP AL, 0						;si ya se recorrio todo
+			JE LlaveCopiaD					;se repite la clave
+			CMP AL, 41h						;Si AL es menor a 41h quiere decir que no esta en el alfabeto
+			JS FilasIgnorarD					
+			CMP AL, 5Bh						;se compara con 5Bh ya que nos dice si ya termino de recorrer el alfabeto
+			JNS FilasIgnorarD				
+			MOV filas, AX					;se guardar el dato en filas
+			SUB filas, 41h					;se resta con 41h ya que se necesita saber un valor no letra
+			JMP FinProcFilasD
+
+			LlaveCopiaD:
+			MOV contadorLlave, 0			;se reincia la clave, para volver a correr la clave
+			JMP BuscarFilaD				; se repite el proceso con diferentes caracteres
+
+			FilasIgnorarD:
+			MOV filas, 1Eh ;30d				; se agrega el dato de filas ya que este tambien se cuenta como un simbolo
+
+			FinProcFilasD:
+			INC contadorLlave				; se incrementa el contador para ver el siguiente caracter de la clave
+
+			CMP filas, 1Eh ;Evalúa caracter a ignorar.
+			JE FilaD
+			
+			LEA ESI, mensajeV
+		    ADD ESI, contadorMensaje 	;se le suma el contador a ESI para que pase al siguiente caracter
+		    MOV AL, [ESI]
+		    CMP AL, 0 ; si ya termino la cadena, imprime el mensaje cifrado
+			JNE CifradoCM
+
+
 JMP programa
 DClaveMensaje:
 DCMCIFRADO
@@ -253,6 +424,4 @@ Limpiar proc
 Finalizar:
 ;Finalizar
 INVOKE ExitProcess, 0
-
-
 END main
