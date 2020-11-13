@@ -97,7 +97,7 @@ main:
     JNE MatrizLlena
 
 programa:
-call Limpiar
+
 INVOKE StdOut, ADDR  proyectointro ;Imprime para que ingrese el nombre
 INVOKE StdOut, ADDR linefeed  ;salto de linea
 
