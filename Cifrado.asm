@@ -36,7 +36,8 @@ columnasM db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
 contadorLlave DD 0
 contadorMensaje DD 0
 contadorD DD 0
-contadorDD DD 0
+contadorDescifrado DD 0
+contadorDD DD 0,0
 contador DB 0
 mensajeCifrado DB 0,0
 mensajeDescifrado DB 0,0
@@ -428,6 +429,7 @@ DClaveMensaje:
 			MOV contadorMensaje, 0
 			MOV contadorLlave, 0
 			MOV contadorDD, 0
+			MOV contadorDescifrado,0
 
 		DecipherLoopD:
         ;calcular la posicion del caracter de palabra clave en la matriz
@@ -500,10 +502,10 @@ DClaveMensaje:
 			ADD EDI,contadorDD
 			MOV [EDI],AL
 			LEA ESI, mensajeV
-			ADD ESI, contadorD
+			ADD ESI, contadorDescifrado
+			INC contadorDD
 			MOV AL, [ESI]
 			CMP AL, 0
-			MOV contadorDD,0
 			JNE DecipherLoop
 			print chr$(13,10)
 
