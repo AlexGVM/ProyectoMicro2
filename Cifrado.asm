@@ -36,11 +36,13 @@ columnasM db "ABCDEFGHIJKLMNOPQRSTUVWXYZ",0
 contadorLlave DD 0
 contadorMensaje DD 0
 contadorD DD 0
+contadorDD DD 0
 contador DB 0
 mensajeCifrado DB 0,0
 mensajeDescifrado DB 0,0
 mensajeV DB 100 dup (0)
 claveV DB 100 dup (0)
+claveDD DB 100 dup (0)
 TxtMensajeCifrado DB "Mensaje Cifrado: ",0
 TxtMensajeDecifrado DB "Mensaje Cifrado: ",0
 
@@ -95,7 +97,7 @@ main:
     JNE MatrizLlena
 
 programa:
-
+call Limpiar
 INVOKE StdOut, ADDR  proyectointro ;Imprime para que ingrese el nombre
 INVOKE StdOut, ADDR linefeed  ;salto de linea
 
@@ -418,47 +420,47 @@ DClaveRepetida:
 
 DClaveMensaje:
 
-   INVOKE StdOut, ADDR mensajeD 
+		    INVOKE StdOut, ADDR mensajeD 
 			INVOKE StdIn, ADDR mensajeV, 100
 			INVOKE StdOut, ADDR clave
 			INVOKE StdIn, ADDR claveV, 100
 			INVOKE StdOut, ADDR TxtMensajeDecifrado
 			MOV contadorMensaje, 0
 			MOV contadorLlave, 0
-			MOV contadorD, 0
+			MOV contadorDD, 0
 
-		DecipherLoop:
+		DecipherLoopD:
         ;calcular la posicion del caracter de palabra clave en la matriz
-			BuscarFilaD:
+			BuscarFilaDD:
 			XOR AX, AX
 			LEA EDI, claveV					;contenido de clave
 			ADD EDI, contadorLlave			;contenido de contador
 			MOV AL, [EDI]
 			CMP AL, 0						;si ya se recorrio todo
-			JE LlaveCopiaD					;se repite la clave
+			JE LlaveCopiaDD				;se repite la clave
 			CMP AL, 41h						;Si AL es menor a 41h quiere decir que no esta en el alfabeto
-			JS FilasIgnorarD					
+			JS FilasIgnorarDD					
 			CMP AL, 5Bh						;se compara con 5Bh ya que nos dice si ya termino de recorrer el alfabeto
-			JNS FilasIgnorarD				
+			JNS FilasIgnorarDD				
 			MOV filas, AX					;se guardar el dato en filas
 			SUB filas, 41h					;se resta con 41h ya que se necesita saber un valor no letra
-			JMP FinProcFilasD
+			JMP FinProcFilasDD
 
-			LlaveCopiaD:
+			LlaveCopiaDD:
 			MOV contadorLlave, 0			;se reincia la clave, para volver a correr la clave
-			JMP BuscarFilaD					; se repite el proceso con diferentes caracteres
+			JMP BuscarFilaDD					; se repite el proceso con diferentes caracteres
 
-			FilasIgnorarD:
+			FilasIgnorarDD:
 			MOV filas, 1Eh ;30d				; se agrega el dato de filas ya que este tambien se cuenta como un simbolo
 
-			FinProcFilasD:
+			FinProcFilasDD:
 			INC contadorLlave				; se incrementa el contador para ver el siguiente caracter de la clave
 
 			CMP filas, 1Eh ;Evalúa caracter a ignorar.
-			JE DecipherLoop
+			JE DecipherLoopD
 			MOV columnas, 0
 
-	     BusquedaMapeo:
+	     BusquedaMapeoD:
 			Mapeo						;Se llama al mapeo para saber el valor de la fila en la columna 0
 			LEA ESI, Matriz
 			ADD ESI, EAX				
@@ -466,25 +468,25 @@ DClaveMensaje:
 			ADD EDI, contadorD
 			MOV BL, [EDI]
 			CMP BL, 20h
-			JE EvaluaEspacio
-			CMP BL, 41h ;"A"
-			JS IngColumnasD
-			CMP BL, 5Bh ;"["
-			JNS IngColumnasD
+			JE EvaluaEspacioD
+			CMP BL, 41h 
+			JS IngColumnasDD
+			CMP BL, 5Bh 
+			JNS IngColumnasDD
 			MOV AL, [ESI]
 			CMP AL, [EDI]
-			JE NoColumnas
+			JE NoColumnasD
 			INC columnas
-			JMP BusquedaMapeo
+			JMP BusquedaMapeoD
 
-			EvaluaEspacio:
+			EvaluaEspacioD:
 			print chr$(" ")
 
-			IngColumnasD:
+			IngColumnasDD:
 			INC contadorD
 			JMP BusquedaMapeo
 
-			NoColumnas:
+			NoColumnasD:
 			INC contadorD
 			MOV filas, 0
 			Mapeo
@@ -493,10 +495,15 @@ DClaveMensaje:
 			MOV AL, [ESI]
 			MOV mensajeDescifrado, AL
 			INVOKE StdOut, ADDR mensajeDescifrado
+			MOV AL,mensajeDescifrado
+			LEA EDI, claveDD
+			ADD EDI,contadorDD
+			MOV [EDI],AL
 			LEA ESI, mensajeV
 			ADD ESI, contadorD
 			MOV AL, [ESI]
 			CMP AL, 0
+			MOV contadorDD,0
 			JNE DecipherLoop
 			print chr$(13,10)
 
